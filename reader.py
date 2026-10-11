@@ -15,11 +15,24 @@ class Reader(object):
         try:
             return converter(text)
         except ValueError as error:
-            print(self.ERRORS.get(converter, error))
+            message = self.ERRORS.get(converter, str(error))
+            print(f'{message}: got "{text}"')
 
     def value(self, prompt, converter):
         while True:
             result = self.parse(self.line(prompt).strip(), converter)
+
+            if result is not None:
+                return result
+
+    def optionalValue(self, prompt, converter, default):
+        while True:
+            text = self.line(f"{prompt} [{default}]: ").strip()
+
+            if text == "":
+                return default
+
+            result = self.parse(text, converter)
 
             if result is not None:
                 return result
@@ -29,7 +42,9 @@ class Reader(object):
 
         if derivative is None:
             print(
-                "Cannot find f'(x): Newton's Method and Modified Newton's Method are not available"
+                "f'(x) does not exist or cannot be computed for this expression "
+                "(differentiation failed or f'(x) is not finite anywhere): "
+                "Newton's Method and Modified Newton's Method are not available"
             )
 
         return func, derivative, secondDerivative
@@ -42,4 +57,7 @@ class Reader(object):
             if right > left:
                 return Segment(left, right)
 
-            print("B must be greater than A")
+            print(f"B must be greater than A: got A = {left}, B = {right}")
+
+
+reader = Reader()

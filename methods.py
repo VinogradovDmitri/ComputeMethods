@@ -44,20 +44,41 @@ def differentiate(expr, x, times=1):
 
 def buildFunction(expression):
     if expression == "":
-        raise ValueError("Please enter a function")
+        raise ValueError("Please enter a function, e.g. x^2 - 2*sin(x)")
 
     x = sp.symbols("x")
 
     try:
         expr = sp.sympify(expression)
         func = sp.lambdify(x, expr, "math")
-    except Exception:
-        raise ValueError("Cannot parse the expression")
+    except Exception as error:
+        raise ValueError(
+            f'Cannot parse the expression "{expression}": {error}'
+        )
 
     if not anyProbeFinite(func):
-        raise ValueError("The function cannot be evaluated")
+        raise ValueError(
+            f'The function "{expression}" cannot be evaluated: '
+            f"it is not finite at any probe point x in {PROBE_POINTS}"
+        )
 
     return func, differentiate(expr, x), differentiate(expr, x, 2)
+
+
+def polynomialInfo(expression):
+    """<degree, leading coefficient> if the expression is a polynomial in x,
+    otherwise (None, None). Used for the divided difference control"""
+    x = sp.symbols("x")
+
+    try:
+        poly = sp.sympify(expression).as_poly(x)
+
+        if poly is None or poly.degree() < 0:
+            return None, None
+
+        return int(poly.degree()), float(poly.LC())
+    except Exception:
+        return None, None
 
 
 def separateRoots(func, segment, stepFactor):
@@ -115,7 +136,10 @@ def approximateByBisection(func, segment, eps):
 
     while currSegment.len() > 2 * eps:
         if stepCounter == MAX_STEPS:
-            error = f"no convergence in {MAX_STEPS} steps"
+            error = (
+                f"no convergence in {MAX_STEPS} steps "
+                f"(the segment is still [{currSegment.left}, {currSegment.right}])"
+            )
             break
 
         stepCounter = stepCounter + 1
@@ -124,7 +148,11 @@ def approximateByBisection(func, segment, eps):
         valueAtCenter = tryEvaluate(func, prevCenter)
 
         if not math.isfinite(valueAtStart) or not math.isfinite(valueAtCenter):
-            error = "the function cannot be evaluated at the current point"
+            error = (
+                "the function cannot be evaluated: it is not finite at "
+                f"x = {prevCenter} or x = {currSegment.left} "
+                "(inside the current bracketing segment)"
+            )
             break
 
         if valueAtStart * valueAtCenter <= 0:
@@ -157,17 +185,20 @@ def approximateByNewton(func, derivative, segment, eps, fixedSlope=False):
             slope = tryEvaluate(derivative, prevX)
 
             if not math.isfinite(slope):
-                error = "the derivative cannot be evaluated at the current point"
+                error = (
+                    "f'(x) cannot be evaluated at x = "
+                    f"{prevX} (the derivative does not exist or is not finite there)"
+                )
                 break
 
             if slope == 0:
-                error = "the derivative is zero at the current point"
+                error = f"f'(x) = 0 at x = {prevX}, the Newton step is undefined"
                 break
 
         valueAtPrev = tryEvaluate(func, prevX)
 
         if not math.isfinite(valueAtPrev):
-            error = "the function cannot be evaluated at the current point"
+            error = f"the function is not finite at x = {prevX}"
             break
 
         currX = prevX - valueAtPrev / slope
@@ -177,7 +208,10 @@ def approximateByNewton(func, derivative, segment, eps, fixedSlope=False):
 
         prevX = currX
     else:
-        error = f"no convergence in {MAX_STEPS} steps"
+        error = (
+            f"no convergence in {MAX_STEPS} steps "
+            f"(the last iterate is x = {prevX}, |f(x)| = {abs(tryEvaluate(func, prevX)):.3e})"
+        )
 
     if error is not None:
         return ApproximationInfo(name, None, stepCounter, error=error)
@@ -198,13 +232,20 @@ def approximateBySecant(func, derivative, segment, eps):
         valueAtPrev = tryEvaluate(func, prevX)
 
         if not math.isfinite(valueAtCurr) or not math.isfinite(valueAtPrev):
-            error = "the function cannot be evaluated at the current point"
+            error = (
+                "the function cannot be evaluated: it is not finite at "
+                f"x = {prevX} or x = {currX}"
+            )
             break
 
         denominator = valueAtCurr - valueAtPrev
 
         if denominator == 0:
-            error = "equal function values at the last two points"
+            error = (
+                f"equal function values at the last two points: "
+                f"f({prevX}) = f({currX}) = {valueAtPrev:.6e}, "
+                "the secant slope is zero"
+            )
             break
 
         nextX = currX - valueAtCurr * (currX - prevX) / denominator
@@ -215,7 +256,10 @@ def approximateBySecant(func, derivative, segment, eps):
         prevX = currX
         currX = nextX
     else:
-        error = f"no convergence in {MAX_STEPS} steps"
+        error = (
+            f"no convergence in {MAX_STEPS} steps "
+            f"(the last iterate is x = {currX}, |f(x)| = {abs(tryEvaluate(func, currX)):.3e})"
+        )
 
     if error is not None:
         return ApproximationInfo("Secant Method", None, stepCounter, error=error)
