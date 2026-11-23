@@ -4,6 +4,7 @@ from equations import runTestTask, runCustomTask, runBallTask
 from interpolation_task import runInterpolationTask
 from differentiation_task import runDifferentiationTask
 from quadrature_task import runQuadratureTask
+from simple_quadrature_task import runSimpleQuadratureTask
 
 
 def main():
@@ -17,6 +18,7 @@ def main():
         print("4. Interpolation task")
         print("5. Differentiation task")
         print("6. Quadrature task (ИКФ)")
+        print("7. Simple quadrature formulas")
         print(dim("0. Exit"))
 
         task = reader.value("Task: ", int)
@@ -39,10 +41,13 @@ def main():
         elif task == 6:
             clearScreen()
             runQuadratureTask()
+        elif task == 7:
+            clearScreen()
+            runSimpleQuadratureTask()
         elif task == 0:
             return
         else:
-            print(red(f"Unknown task: {task} (enter 0..6)"))
+            print(red(f"Unknown task: {task} (enter 0..7)"))
 
 
 if __name__ == "__main__":
