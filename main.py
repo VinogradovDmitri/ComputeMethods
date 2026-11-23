@@ -3,6 +3,7 @@ from style import clearScreen, bold, dim, red
 from equations import runTestTask, runCustomTask, runBallTask
 from interpolation_task import runInterpolationTask
 from differentiation_task import runDifferentiationTask
+from quadrature_task import runQuadratureTask
 
 
 def main():
@@ -15,6 +16,7 @@ def main():
         print("3. Ball task")
         print("4. Interpolation task")
         print("5. Differentiation task")
+        print("6. Quadrature task (ИКФ)")
         print(dim("0. Exit"))
 
         task = reader.value("Task: ", int)
@@ -34,10 +36,13 @@ def main():
         elif task == 5:
             clearScreen()
             runDifferentiationTask()
+        elif task == 6:
+            clearScreen()
+            runQuadratureTask()
         elif task == 0:
             return
         else:
-            print(red(f"Unknown task: {task} (enter 0..5)"))
+            print(red(f"Unknown task: {task} (enter 0..6)"))
 
 
 if __name__ == "__main__":
